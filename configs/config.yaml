@@ -7,11 +7,12 @@ server:
 
 # Default target API configuration
 default_target:
-  base_url: "https://api.deepseek.com"
-  path_suffix: "/v1/chat/completions"
-  # Set API key via environment variable R2C_DEFAULT_API_KEY or Authorization header
+  base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
+  path_suffix: "/chat/completions"
+  # Set API key via environment variable R2C_DEFAULT_API_KEY or directly below
+  default_api_key: ""  # Or set your Zhipu API key here
   timeout: 300
-  supports_developer_role: true  # DeepSeek supports 'developer' role
+  supports_developer_role: false
 
 # Multi-provider configuration
 # Set API keys via environment variables:
@@ -24,7 +25,7 @@ providers:
     base_url: "https://api.deepseek.com"
     path_suffix: "/v1/chat/completions"
     timeout: 300
-    supports_developer_role: true  # DeepSeek supports 'developer' role
+    supports_developer_role: false  # DeepSeek does NOT support 'developer' role
 
   zhipu:
     base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
@@ -69,11 +70,13 @@ logging:
 # Model mapping (optional)
 # Maps Codex model names to target provider model names
 model_mapping:
-  "gpt-4": "deepseek-chat"
-  "gpt-4o": "deepseek-chat"
-  "gpt-4-turbo": "deepseek-chat"
-  "o1": "deepseek-reasoner"
-  "o3-mini": "deepseek-reasoner"
+  "gpt-4": "glm-5"
+  "gpt-4o": "glm-5"
+  "gpt-4-turbo": "glm-5"
+  "o1": "glm-z1-airx"
+  "o3-mini": "glm-z1-airx"
+  "deepseek-chat": "glm-5"
+  "deepseek-reasoner": "glm-z1-airx"
 
 # Storage configuration for multi-turn conversation support
 storage:

@@ -142,26 +142,35 @@ func convertMessageItem(item *models.InputItem, supportsDeveloperRole bool) *mod
 		if len(item.Content) == 1 && item.Content[0].Type == "input_text" {
 			msg.Content = item.Content[0].Text
 		} else {
-			// Multimodal content
-			parts := make([]models.ChatContentPart, len(item.Content))
-			for i, c := range item.Content {
+			// Multimodal content - filter and convert
+			var parts []models.ChatContentPart
+			for _, c := range item.Content {
 				switch c.Type {
 				case "input_text":
-					parts[i] = models.ChatContentPart{
+					parts = append(parts, models.ChatContentPart{
 						Type: "text",
 						Text: c.Text,
-					}
+					})
 				case "input_image":
-					parts[i] = models.ChatContentPart{
+					part := models.ChatContentPart{
 						Type: "image_url",
 					}
-					parts[i].ImageURL.URL = c.ImageURL
+					part.ImageURL.URL = c.ImageURL
 					if c.ImageURL == "" && c.Data != "" {
-						parts[i].ImageURL.URL = c.Data
+						part.ImageURL.URL = c.Data
 					}
+					parts = append(parts, part)
+				default:
+					// Skip unknown content types to avoid API errors
+					// Some providers don't accept empty or unknown types
 				}
 			}
-			msg.Content = parts
+			// If only one text part after filtering, simplify to string
+			if len(parts) == 1 && parts[0].Type == "text" {
+				msg.Content = parts[0].Text
+			} else if len(parts) > 0 {
+				msg.Content = parts
+			}
 		}
 	}
 

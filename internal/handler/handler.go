@@ -286,10 +286,14 @@ func (h *ProxyHandler) handleResponses(w http.ResponseWriter, r *http.Request, l
 		zap.Bool("has_web_search", hasWebSearch),
 	)
 
-	// Get API Key
-	apiKey := r.Header.Get("Authorization")
-	if apiKey == "" && targetCfg.DefaultAPIKey != "" {
+	// Get API Key - prefer default_api_key from config if available
+	apiKey := ""
+	if targetCfg.DefaultAPIKey != "" {
 		apiKey = "Bearer " + targetCfg.DefaultAPIKey
+		log.Debug("using default API key from config")
+	} else {
+		apiKey = r.Header.Get("Authorization")
+		log.Debug("using API key from header")
 	}
 
 	if apiKey == "" {
@@ -322,7 +326,23 @@ func (h *ProxyHandler) handleResponses(w http.ResponseWriter, r *http.Request, l
 		responseID := generateResponseID()
 
 		if req.Stream {
-			h.webSearchHandler.HandleStreamingWithWebSearch(w, r, chatReq, apiKey, targetCfg, responseID, log)
+			result := h.webSearchHandler.HandleStreamingWithWebSearch(w, r, chatReq, apiKey, targetCfg, responseID, log)
+			if result != nil {
+				// Store complete conversation history
+				completeMessages := make([]models.ChatMessage, len(chatReq.Messages))
+				copy(completeMessages, chatReq.Messages)
+				completeMessages = append(completeMessages, result.AssistantMsg)
+
+				fullResponseID := fmt.Sprintf("resp-%s", responseID)
+				if err := h.store.Store(fullResponseID, completeMessages); err != nil {
+					log.Error("failed to store streaming web_search conversation history", zap.Error(err))
+				} else {
+					log.Info("stored streaming web_search conversation history",
+						zap.String("response_id", fullResponseID),
+						zap.Int("message_count", len(completeMessages)),
+					)
+				}
+			}
 		} else {
 			h.handleNonStreamingWithWebSearch(w, r, chatReq, apiKey, targetCfg, responseID, log)
 		}
@@ -350,6 +370,9 @@ func (h *ProxyHandler) handleResponses(w http.ResponseWriter, r *http.Request, l
 	// Set headers
 	targetReq.Header.Set("Content-Type", "application/json")
 	targetReq.Header.Set("Authorization", apiKey)
+	log.Debug("sending to upstream",
+		zap.String("authorization", apiKey[:min(len(apiKey), 30)]+"..."),
+	)
 
 	// Forward trace ID to upstream
 	if traceID, ok := r.Context().Value(traceIDKey).(string); ok && traceID != "" {

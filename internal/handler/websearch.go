@@ -289,8 +289,16 @@ func GenerateWebSearchCallID() string {
 	return fmt.Sprintf("ws_%s", id.String()[:16])
 }
 
+// StreamingResult contains the result of streaming web_search handling for storage
+type StreamingResult struct {
+	ResponseID     string
+	AssistantMsg   models.ChatMessage
+	WebSearchCalls []WebSearchCall
+}
+
 // HandleStreamingWithWebSearch handles streaming response with web_search support
 // This is more complex as we need to buffer the response and check for tool calls
+// Returns the result for storage
 func (h *WebSearchHandler) HandleStreamingWithWebSearch(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -299,7 +307,7 @@ func (h *WebSearchHandler) HandleStreamingWithWebSearch(
 	targetCfg *config.TargetConfig,
 	responseID string,
 	log *zap.Logger,
-) {
+) *StreamingResult {
 	// For streaming, we need to collect the entire response first
 	// to check for web_search tool calls
 	ctx := r.Context()
@@ -308,12 +316,25 @@ func (h *WebSearchHandler) HandleStreamingWithWebSearch(
 	if err != nil {
 		log.Error("web_search handling failed", zap.Error(err))
 		h.writeError(w, err)
-		return
+		return nil
 	}
 
 	// Now stream the final response
 	// Since we already have the complete response, we'll simulate streaming
 	h.simulateStreaming(w, resp, responseID, webSearchCalls, log)
+
+	// Build result for storage
+	result := &StreamingResult{
+		ResponseID:     responseID,
+		WebSearchCalls: webSearchCalls,
+	}
+
+	// Build assistant message from response
+	if len(resp.Choices) > 0 {
+		result.AssistantMsg = resp.Choices[0].Message
+	}
+
+	return result
 }
 
 // simulateStreaming simulates streaming for web_search handled responses
@@ -371,9 +392,10 @@ func (h *WebSearchHandler) simulateStreaming(
 			"type":         "response.output_item.added",
 			"output_index": contentIndex,
 			"item": map[string]interface{}{
-				"type": "message",
-				"id":   fmt.Sprintf("msg-%s", responseID),
-				"role": "assistant",
+				"type":   "message",
+				"id":     fmt.Sprintf("msg-%s", responseID),
+				"role":   "assistant",
+				"status": "in_progress",
 			},
 		})
 
@@ -385,6 +407,19 @@ func (h *WebSearchHandler) simulateStreaming(
 				"output_index": contentIndex,
 			})
 		}
+
+		// Send output_item.done for message (required by Codex CLI)
+		h.sendSSE(w, flusher, "response.output_item.done", map[string]interface{}{
+			"type":         "response.output_item.done",
+			"output_index": contentIndex,
+			"item": map[string]interface{}{
+				"type":    "message",
+				"id":      fmt.Sprintf("msg-%s", responseID),
+				"role":    "assistant",
+				"content": []map[string]interface{}{{"type": "output_text", "text": choice.Message.Content}},
+				"status":  "completed",
+			},
+		})
 
 		// Send tool calls if any
 		for _, tc := range choice.Message.ToolCalls {

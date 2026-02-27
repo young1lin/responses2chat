@@ -71,10 +71,11 @@ func HandleStreamingResponse(
 	writer := NewSSEWriter(w, logger)
 
 	// Send response.created event
+	// Note: Use "resp-" prefix to match storage format for multi-turn conversation support
 	createdEvent := models.ResponseCreatedEvent{
 		Type: "response.created",
 		Response: models.ResponseSummary{
-			ID:     responseID,
+			ID:     fmt.Sprintf("resp-%s", responseID),
 			Status: "in_progress",
 		},
 	}
@@ -133,10 +134,11 @@ func HandleStreamingResponse(
 			writer.WriteEvent("response.output_item.done", string(msgJSON))
 
 			// Send response.completed event
+			// Note: Use "resp-" prefix to match storage format for multi-turn conversation support
 			completedEvent := models.ResponseCompletedEvent{
 				Type: "response.completed",
 				Response: models.ResponsesResponse{
-					ID:     responseID,
+					ID:     fmt.Sprintf("resp-%s", responseID),
 					Status: "completed",
 				},
 			}
