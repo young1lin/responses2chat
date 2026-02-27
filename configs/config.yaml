@@ -11,6 +11,7 @@ default_target:
   path_suffix: "/v1/chat/completions"
   # Set API key via environment variable R2C_DEFAULT_API_KEY or Authorization header
   timeout: 300
+  supports_developer_role: true  # DeepSeek supports 'developer' role
 
 # Multi-provider configuration
 # Set API keys via environment variables:
@@ -23,6 +24,7 @@ providers:
     base_url: "https://api.deepseek.com"
     path_suffix: "/v1/chat/completions"
     timeout: 300
+    supports_developer_role: true  # DeepSeek supports 'developer' role
 
   zhipu:
     base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
@@ -76,3 +78,47 @@ model_mapping:
 # Storage configuration for multi-turn conversation support
 storage:
   path: "./data/conversations.db"
+
+# Web Search configuration for tool interception
+# Enable web_search tool support for third-party LLM providers
+# Set API keys via environment variables:
+# - R2C_WEB_SEARCH_PROVIDERS_ZHIPU_API_KEY
+# - R2C_WEB_SEARCH_PROVIDERS_FIRECRAWL_API_KEY
+# - R2C_WEB_SEARCH_PROVIDERS_TAVILY_API_KEY (example)
+web_search:
+  enabled: true
+  default: "zhipu"  # Default provider to use
+  providers:
+    # MCP Type - Generic implementation for MCP-compatible services
+    zhipu:
+      type: "mcp"
+      base_url: "https://open.bigmodel.cn/api/mcp/web_search_prime/mcp"
+      api_key: ""
+      tool_name: "webSearchPrime"      # MCP tool name
+      query_param: "search_query"      # Query parameter name
+      timeout: 30
+
+    # Additional MCP providers can be added without code changes
+    # tavily:
+    #   type: "mcp"
+    #   base_url: "https://api.tavily.com/mcp"
+    #   api_key: ""
+    #   tool_name: "search"
+    #   query_param: "query"
+    #   timeout: 30
+
+    # exa:
+    #   type: "mcp"
+    #   base_url: "https://api.exa.ai/mcp"
+    #   api_key: ""
+    #   tool_name: "web_search"
+    #   query_param: "query"
+    #   timeout: 30
+
+    # Firecrawl Type - Specialized implementation
+    firecrawl:
+      type: "firecrawl"
+      base_url: "https://api.firecrawl.dev/v2"
+      api_key: ""
+      timeout: 30
+      max_results: 5

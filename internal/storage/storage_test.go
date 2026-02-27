@@ -106,7 +106,7 @@ func TestConversationStore(t *testing.T) {
 		messages := []models.ChatMessage{
 			{Role: "user", Content: "What's the weather?"},
 			{
-				Role: "assistant",
+				Role:    "assistant",
 				Content: "",
 				ToolCalls: []models.ToolCall{
 					{

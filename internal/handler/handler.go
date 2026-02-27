@@ -16,15 +16,18 @@ import (
 	"github.com/young1lin/responses2chat/internal/config"
 	"github.com/young1lin/responses2chat/internal/converter"
 	"github.com/young1lin/responses2chat/internal/models"
+	"github.com/young1lin/responses2chat/internal/search"
 	"github.com/young1lin/responses2chat/internal/storage"
 	"github.com/young1lin/responses2chat/pkg/logger"
 )
 
 // ProxyHandler handles the proxy requests
 type ProxyHandler struct {
-	config *config.Config
-	client *http.Client
-	store  *storage.ConversationStore
+	config           *config.Config
+	client           *http.Client
+	store            *storage.ConversationStore
+	searchManager    *search.Manager
+	webSearchHandler *WebSearchHandler
 }
 
 // contextKey is used for context values
@@ -33,10 +36,11 @@ type contextKey string
 const traceIDKey contextKey = "traceID"
 
 // NewProxyHandler creates a new proxy handler
-func NewProxyHandler(cfg *config.Config, store *storage.ConversationStore) *ProxyHandler {
-	return &ProxyHandler{
-		config: cfg,
-		store:  store,
+func NewProxyHandler(cfg *config.Config, store *storage.ConversationStore, searchManager *search.Manager) *ProxyHandler {
+	h := &ProxyHandler{
+		config:        cfg,
+		store:         store,
+		searchManager: searchManager,
 		client: &http.Client{
 			Timeout: time.Duration(cfg.DefaultTarget.Timeout) * time.Second,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -44,6 +48,13 @@ func NewProxyHandler(cfg *config.Config, store *storage.ConversationStore) *Prox
 			},
 		},
 	}
+
+	// Initialize web search handler if search manager is available
+	if searchManager != nil {
+		h.webSearchHandler = NewWebSearchHandler(cfg, searchManager)
+	}
+
+	return h
 }
 
 // ServeHTTP handles all HTTP requests
@@ -268,10 +279,11 @@ func (h *ProxyHandler) handleResponses(w http.ResponseWriter, r *http.Request, l
 	}
 
 	// Convert to Chat Completions format with history
-	chatReq := converter.ConvertRequest(&req, h.config.ModelMapping, history)
+	chatReq, hasWebSearch := converter.ConvertRequest(&req, h.config.ModelMapping, history, targetCfg.SupportsDeveloperRole)
 	log.Debug("converted request",
 		zap.String("model", chatReq.Model),
 		zap.Int("message_count", len(chatReq.Messages)),
+		zap.Bool("has_web_search", hasWebSearch),
 	)
 
 	// Get API Key
@@ -302,6 +314,22 @@ func (h *ProxyHandler) handleResponses(w http.ResponseWriter, r *http.Request, l
 		log.Debug("tools being sent", zap.Strings("tool_names", toolNames))
 	}
 
+	// Check if we should handle web_search tool
+	if hasWebSearch && h.webSearchHandler != nil && h.webSearchHandler.HasWebSearchCapability() {
+		log.Info("using web_search handler for request")
+
+		// Generate response ID
+		responseID := generateResponseID()
+
+		if req.Stream {
+			h.webSearchHandler.HandleStreamingWithWebSearch(w, r, chatReq, apiKey, targetCfg, responseID, log)
+		} else {
+			h.handleNonStreamingWithWebSearch(w, r, chatReq, apiKey, targetCfg, responseID, log)
+		}
+		return
+	}
+
+	// Standard request handling without web_search interception
 	// Marshal request
 	chatReqBody, err := json.Marshal(chatReq)
 	if err != nil {
@@ -458,6 +486,59 @@ func (h *ProxyHandler) handleNonStreamingResponse(w http.ResponseWriter, r *http
 	json.NewEncoder(w).Encode(responsesResp)
 }
 
+// handleNonStreamingWithWebSearch handles non-streaming responses with web_search support
+func (h *ProxyHandler) handleNonStreamingWithWebSearch(
+	w http.ResponseWriter,
+	r *http.Request,
+	chatReq *models.ChatCompletionRequest,
+	apiKey string,
+	targetCfg *config.TargetConfig,
+	responseID string,
+	log *zap.Logger,
+) {
+	ctx := r.Context()
+
+	// Use web search handler to process the request
+	chatResp, webSearchCalls, err := h.webSearchHandler.HandleWithWebSearch(ctx, chatReq, apiKey, targetCfg, log)
+	if err != nil {
+		h.handleError(w, r, http.StatusBadGateway, "web_search_error", fmt.Sprintf("Web search handling failed: %v", err), log)
+		return
+	}
+
+	// Convert to Responses API format with web_search_call items
+	responsesResp := ConvertResponseWithWebSearch(chatResp, responseID, webSearchCalls)
+
+	log.Info("web_search response converted",
+		zap.String("response_id", responsesResp.ID),
+		zap.Int("output_count", len(responsesResp.Output)),
+		zap.Int("web_search_calls", len(webSearchCalls)),
+	)
+
+	// Store complete conversation history
+	completeMessages := make([]models.ChatMessage, len(chatReq.Messages))
+	copy(completeMessages, chatReq.Messages)
+
+	// Add assistant response to history
+	if len(chatResp.Choices) > 0 {
+		assistantMsg := chatResp.Choices[0].Message
+		completeMessages = append(completeMessages, assistantMsg)
+	}
+
+	if err := h.store.Store(responsesResp.ID, completeMessages); err != nil {
+		log.Error("failed to store conversation history", zap.Error(err))
+	} else {
+		log.Info("stored conversation history",
+			zap.String("response_id", responsesResp.ID),
+			zap.Int("message_count", len(completeMessages)),
+		)
+	}
+
+	// Send response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(responsesResp)
+}
+
 // handleUpstreamError handles upstream errors
 func (h *ProxyHandler) handleUpstreamError(w http.ResponseWriter, r *http.Request, resp *http.Response, log *zap.Logger) {
 	body, _ := io.ReadAll(resp.Body)
@@ -469,7 +550,7 @@ func (h *ProxyHandler) handleUpstreamError(w http.ResponseWriter, r *http.Reques
 	// Try to parse error response
 	var errResp struct {
 		Error   models.ErrorDetail `json:"error"`
-		Message string            `json:"message"`
+		Message string             `json:"message"`
 	}
 
 	errorMsg := string(body)

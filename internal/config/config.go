@@ -1,17 +1,38 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Server       ServerConfig             `mapstructure:"server"`
-	DefaultTarget TargetConfig             `mapstructure:"default_target"`
-	Providers    map[string]TargetConfig  `mapstructure:"providers"`
-	Logging      LoggingConfig            `mapstructure:"logging"`
-	ModelMapping map[string]string        `mapstructure:"model_mapping"`
-	Storage      StorageConfig            `mapstructure:"storage"`
+	Server        ServerConfig            `mapstructure:"server"`
+	DefaultTarget TargetConfig            `mapstructure:"default_target"`
+	Providers     map[string]TargetConfig `mapstructure:"providers"`
+	Logging       LoggingConfig           `mapstructure:"logging"`
+	ModelMapping  map[string]string       `mapstructure:"model_mapping"`
+	Storage       StorageConfig           `mapstructure:"storage"`
+	WebSearch     WebSearchConfig         `mapstructure:"web_search"`
+}
+
+// WebSearchConfig represents web search configuration
+type WebSearchConfig struct {
+	Enabled   bool                      `mapstructure:"enabled"`
+	Default   string                    `mapstructure:"default"` // Default provider name
+	Providers map[string]ProviderConfig `mapstructure:"providers"`
+}
+
+// ProviderConfig represents a generic search provider configuration
+type ProviderConfig struct {
+	Type       string `mapstructure:"type"` // "mcp", "firecrawl", "rest"
+	BaseURL    string `mapstructure:"base_url"`
+	APIKey     string `mapstructure:"api_key"`
+	ToolName   string `mapstructure:"tool_name"`   // MCP: tool name to call
+	QueryParam string `mapstructure:"query_param"` // MCP: query parameter name
+	Timeout    int    `mapstructure:"timeout"`
+	MaxResults int    `mapstructure:"max_results"` // For firecrawl etc.
 }
 
 type StorageConfig struct {
@@ -26,10 +47,11 @@ type ServerConfig struct {
 }
 
 type TargetConfig struct {
-	BaseURL       string `mapstructure:"base_url"`
-	PathSuffix    string `mapstructure:"path_suffix"`
-	DefaultAPIKey string `mapstructure:"default_api_key"`
-	Timeout       int    `mapstructure:"timeout"`
+	BaseURL               string `mapstructure:"base_url"`
+	PathSuffix            string `mapstructure:"path_suffix"`
+	DefaultAPIKey         string `mapstructure:"default_api_key"`
+	Timeout               int    `mapstructure:"timeout"`
+	SupportsDeveloperRole bool   `mapstructure:"supports_developer_role"` // Whether provider supports 'developer' role
 }
 
 type LoggingConfig struct {
@@ -47,7 +69,9 @@ func Load(cfgFile string) *Config {
 	// Set defaults
 	setDefaults(v)
 
-	// Bind environment variables
+	// Configure environment variable handling
+	// Replace . with _ for nested config keys
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.SetEnvPrefix("R2C")
 	v.AutomaticEnv()
 
@@ -94,4 +118,17 @@ func setDefaults(v *viper.Viper) {
 
 	// Storage defaults
 	v.SetDefault("storage.path", "./data/conversations.db")
+
+	// Web Search defaults
+	v.SetDefault("web_search.enabled", true)
+	v.SetDefault("web_search.default", "zhipu")
+	v.SetDefault("web_search.providers.firecrawl.type", "firecrawl")
+	v.SetDefault("web_search.providers.firecrawl.base_url", "https://api.firecrawl.dev/v2")
+	v.SetDefault("web_search.providers.firecrawl.timeout", 30)
+	v.SetDefault("web_search.providers.firecrawl.max_results", 5)
+	v.SetDefault("web_search.providers.zhipu.type", "mcp")
+	v.SetDefault("web_search.providers.zhipu.base_url", "https://open.bigmodel.cn/api/mcp/web_search_prime/mcp")
+	v.SetDefault("web_search.providers.zhipu.tool_name", "webSearchPrime")
+	v.SetDefault("web_search.providers.zhipu.query_param", "search_query")
+	v.SetDefault("web_search.providers.zhipu.timeout", 30)
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/young1lin/responses2chat/internal/config"
 	"github.com/young1lin/responses2chat/internal/handler"
+	"github.com/young1lin/responses2chat/internal/search"
 	"github.com/young1lin/responses2chat/internal/storage"
 	"github.com/young1lin/responses2chat/pkg/logger"
 )
@@ -95,8 +96,11 @@ func startServer(cfg *config.Config) {
 	}
 	defer store.Close()
 
+	// Initialize search manager
+	searchManager := search.NewManager(&cfg.WebSearch)
+
 	// Create handler
-	proxyHandler := handler.NewProxyHandler(cfg, store)
+	proxyHandler := handler.NewProxyHandler(cfg, store, searchManager)
 
 	// Create server
 	srv := &http.Server{
@@ -117,6 +121,11 @@ func startServer(cfg *config.Config) {
 	}()
 
 	// Print startup info
+	webSearchStatus := "disabled"
+	if cfg.WebSearch.Enabled && searchManager.HasAvailableProvider() {
+		webSearchStatus = "enabled (" + cfg.WebSearch.Default + ")"
+	}
+
 	fmt.Printf(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                 responses2chat %s                      ║
@@ -125,9 +134,10 @@ func startServer(cfg *config.Config) {
 ║  Health: http://%s:%d/health                      ║
 ║  Target: %s                         ║
 ║  Storage: %s                          ║
+║  Web Search: %s                             ║
 ╚═══════════════════════════════════════════════════════════╝
 
-`, Version, cfg.Server.Host, cfg.Server.Port, cfg.Server.Host, cfg.Server.Port, cfg.DefaultTarget.BaseURL, storePath)
+`, Version, cfg.Server.Host, cfg.Server.Port, cfg.Server.Host, cfg.Server.Port, cfg.DefaultTarget.BaseURL, storePath, webSearchStatus)
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)

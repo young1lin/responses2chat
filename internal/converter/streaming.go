@@ -87,7 +87,7 @@ func HandleStreamingResponse(
 
 	var (
 		outputText       string
-		currentToolID   int
+		currentToolID    int
 		toolCalls        = make(map[int]*models.OutputItem)
 		messageItemAdded bool // Track if we've sent the message item added event
 	)
@@ -166,7 +166,7 @@ func HandleStreamingResponse(
 					Type: "response.output_item.added",
 					Item: models.OutputItem{
 						Type:   "message",
-						ID:    fmt.Sprintf("msg-%s", responseID),
+						ID:     fmt.Sprintf("msg-%s", responseID),
 						Role:   "assistant",
 						Status: "in_progress",
 					},
@@ -262,7 +262,7 @@ func HandleStreamingError(w http.ResponseWriter, responseID string, err error, l
 
 	// Send error event
 	errorEvent := struct {
-		Type  string                `json:"type"`
+		Type  string             `json:"type"`
 		Error models.ErrorDetail `json:"error"`
 	}{
 		Type: "error",

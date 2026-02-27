@@ -25,7 +25,11 @@ func TestConvertRequest(t *testing.T) {
 			},
 		}
 
-		chatReq := ConvertRequest(req, modelMapping, nil)
+		chatReq, hasWebSearch := ConvertRequest(req, modelMapping, nil, false)
+
+		if hasWebSearch {
+			t.Error("Expected hasWebSearch to be false")
+		}
 
 		if chatReq.Model != "deepseek-chat" {
 			t.Errorf("Expected model 'deepseek-chat', got '%s'", chatReq.Model)
@@ -55,7 +59,7 @@ func TestConvertRequest(t *testing.T) {
 			},
 		}
 
-		chatReq := ConvertRequest(req, modelMapping, nil)
+		chatReq, _ := ConvertRequest(req, modelMapping, nil, false)
 
 		if len(chatReq.Messages) != 2 {
 			t.Fatalf("Expected 2 messages (system + user), got %d", len(chatReq.Messages))
@@ -85,7 +89,7 @@ func TestConvertRequest(t *testing.T) {
 			},
 		}
 
-		chatReq := ConvertRequest(req, modelMapping, history)
+		chatReq, _ := ConvertRequest(req, modelMapping, history, false)
 
 		// Should have: history (2) + new message (1) = 3
 		if len(chatReq.Messages) != 3 {
@@ -121,7 +125,7 @@ func TestConvertRequest(t *testing.T) {
 			},
 		}
 
-		chatReq := ConvertRequest(req, modelMapping, history)
+		chatReq, _ := ConvertRequest(req, modelMapping, history, false)
 
 		// Should have: system (1) + history (2) + new message (1) = 4
 		if len(chatReq.Messages) != 4 {
@@ -146,7 +150,7 @@ func TestConvertRequest(t *testing.T) {
 			},
 		}
 
-		chatReq := ConvertRequest(req, modelMapping, nil)
+		chatReq, _ := ConvertRequest(req, modelMapping, nil, false)
 
 		if len(chatReq.Messages) != 1 {
 			t.Fatalf("Expected 1 message, got %d", len(chatReq.Messages))
@@ -170,14 +174,14 @@ func TestConvertRequest(t *testing.T) {
 			Model: "gpt-4",
 			Input: []models.InputItem{
 				{
-					Type:    "function_call_output",
-					CallID:  "call_123",
-					Output:  `{"temperature": 25}`,
+					Type:   "function_call_output",
+					CallID: "call_123",
+					Output: `{"temperature": 25}`,
 				},
 			},
 		}
 
-		chatReq := ConvertRequest(req, modelMapping, nil)
+		chatReq, _ := ConvertRequest(req, modelMapping, nil, false)
 
 		if len(chatReq.Messages) != 1 {
 			t.Fatalf("Expected 1 message, got %d", len(chatReq.Messages))
@@ -214,7 +218,7 @@ func TestConvertRequest(t *testing.T) {
 					},
 				},
 				{
-					Type: "web_search", // Should be ignored
+					Type: "web_search", // Should be converted to function
 				},
 				{
 					Type: "function",
@@ -225,18 +229,27 @@ func TestConvertRequest(t *testing.T) {
 			},
 		}
 
-		chatReq := ConvertRequest(req, modelMapping, nil)
+		chatReq, hasWebSearch := ConvertRequest(req, modelMapping, nil, false)
 
-		if len(chatReq.Tools) != 1 {
-			t.Fatalf("Expected 1 tool, got %d", len(chatReq.Tools))
+		// Should have 2 tools: get_weather + web_search function
+		if len(chatReq.Tools) != 2 {
+			t.Fatalf("Expected 2 tools, got %d", len(chatReq.Tools))
 		}
 
 		if chatReq.Tools[0].Function.Name != "get_weather" {
-			t.Errorf("Expected function name 'get_weather', got '%s'", chatReq.Tools[0].Function.Name)
+			t.Errorf("Expected first function name 'get_weather', got '%s'", chatReq.Tools[0].Function.Name)
+		}
+
+		if chatReq.Tools[1].Function.Name != "web_search" {
+			t.Errorf("Expected second function name 'web_search', got '%s'", chatReq.Tools[1].Function.Name)
+		}
+
+		if !hasWebSearch {
+			t.Error("Expected hasWebSearch to be true when web_search tool is present")
 		}
 	})
 
-	t.Run("Developer role mapped to system", func(t *testing.T) {
+	t.Run("Developer role mapped to user when not supported", func(t *testing.T) {
 		req := &models.ResponsesRequest{
 			Model: "gpt-4",
 			Input: []models.InputItem{
@@ -250,10 +263,33 @@ func TestConvertRequest(t *testing.T) {
 			},
 		}
 
-		chatReq := ConvertRequest(req, modelMapping, nil)
+		// Provider does NOT support developer role (default)
+		chatReq, _ := ConvertRequest(req, modelMapping, nil, false)
 
-		if chatReq.Messages[0].Role != "system" {
-			t.Errorf("Expected 'developer' to be mapped to 'system', got '%s'", chatReq.Messages[0].Role)
+		if chatReq.Messages[0].Role != "user" {
+			t.Errorf("Expected 'developer' to be mapped to 'user' when not supported, got '%s'", chatReq.Messages[0].Role)
+		}
+	})
+
+	t.Run("Developer role kept when supported", func(t *testing.T) {
+		req := &models.ResponsesRequest{
+			Model: "gpt-4",
+			Input: []models.InputItem{
+				{
+					Type: "message",
+					Role: "developer",
+					Content: []models.ContentItem{
+						{Type: "input_text", Text: "System instruction"},
+					},
+				},
+			},
+		}
+
+		// Provider DOES support developer role (e.g., DeepSeek)
+		chatReq, _ := ConvertRequest(req, modelMapping, nil, true)
+
+		if chatReq.Messages[0].Role != "developer" {
+			t.Errorf("Expected 'developer' role to be kept when supported, got '%s'", chatReq.Messages[0].Role)
 		}
 	})
 }

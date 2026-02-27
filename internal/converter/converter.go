@@ -6,9 +6,30 @@ import (
 	"github.com/young1lin/responses2chat/internal/models"
 )
 
+// WebSearchFunctionTool is the injected web_search function tool
+var WebSearchFunctionTool = models.ChatTool{
+	Type: "function",
+	Function: models.FunctionDef{
+		Name:        "web_search",
+		Description: "搜索互联网获取实时信息，如新闻、天气、股价等。当用户询问实时信息时使用此工具。",
+		Parameters: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"query": map[string]interface{}{
+					"type":        "string",
+					"description": "搜索关键词或问题",
+				},
+			},
+			"required": []string{"query"},
+		},
+	},
+}
+
 // ConvertRequest converts a Responses API request to Chat Completions API request
 // history contains previous conversation messages retrieved by previous_response_id
-func ConvertRequest(req *models.ResponsesRequest, modelMapping map[string]string, history []models.ChatMessage) *models.ChatCompletionRequest {
+// supportsDeveloperRole indicates if the target provider supports 'developer' role
+// Returns the chat request and a boolean indicating if web_search tool was present
+func ConvertRequest(req *models.ResponsesRequest, modelMapping map[string]string, history []models.ChatMessage, supportsDeveloperRole bool) (*models.ChatCompletionRequest, bool) {
 	chatReq := &models.ChatCompletionRequest{
 		Stream: req.Stream,
 	}
@@ -47,7 +68,7 @@ func ConvertRequest(req *models.ResponsesRequest, modelMapping map[string]string
 
 	// Convert input items to messages
 	for _, item := range req.Input {
-		msg := convertInputItemToMessage(&item)
+		msg := convertInputItemToMessage(&item, supportsDeveloperRole)
 		if msg != nil {
 			messages = append(messages, *msg)
 		}
@@ -55,11 +76,17 @@ func ConvertRequest(req *models.ResponsesRequest, modelMapping map[string]string
 
 	chatReq.Messages = messages
 
-	// Convert tools - only keep function type tools with valid names
-	// Other types like web_search, code_interpreter are not supported by most providers
-	// Also filter out tools with empty function names
+	// Track if web_search tool is present
+	hasWebSearchTool := false
+
+	// Convert tools
 	for _, tool := range req.Tools {
-		if tool.Type == "function" && tool.Function.Name != "" {
+		if tool.Type == "web_search" {
+			// Detect web_search tool and inject function version
+			hasWebSearchTool = true
+			// Inject web_search as a callable function
+			chatReq.Tools = append(chatReq.Tools, WebSearchFunctionTool)
+		} else if tool.Type == "function" && tool.Function.Name != "" {
 			chatReq.Tools = append(chatReq.Tools, models.ChatTool{
 				Type:     tool.Type,
 				Function: tool.Function,
@@ -75,14 +102,14 @@ func ConvertRequest(req *models.ResponsesRequest, modelMapping map[string]string
 		chatReq.MaxTokens = req.MaxTokens
 	}
 
-	return chatReq
+	return chatReq, hasWebSearchTool
 }
 
 // convertInputItemToMessage converts an input item to a chat message
-func convertInputItemToMessage(item *models.InputItem) *models.ChatMessage {
+func convertInputItemToMessage(item *models.InputItem, supportsDeveloperRole bool) *models.ChatMessage {
 	switch item.Type {
 	case "message":
-		return convertMessageItem(item)
+		return convertMessageItem(item, supportsDeveloperRole)
 	case "function_call":
 		return convertFunctionCallItem(item)
 	case "function_call_output":
@@ -93,15 +120,16 @@ func convertInputItemToMessage(item *models.InputItem) *models.ChatMessage {
 }
 
 // convertMessageItem converts a message input item
-func convertMessageItem(item *models.InputItem) *models.ChatMessage {
+func convertMessageItem(item *models.InputItem, supportsDeveloperRole bool) *models.ChatMessage {
 	if item.Role == "" {
 		return nil
 	}
 
-	// Map roles: developer -> system (for compatibility with non-OpenAI providers)
+	// Map roles: developer -> user (for compatibility with non-OpenAI providers)
+	// Many providers (e.g., Alibaba Qwen) don't support 'developer' role
 	role := item.Role
-	if role == "developer" {
-		role = "system"
+	if role == "developer" && !supportsDeveloperRole {
+		role = "user"
 	}
 
 	msg := &models.ChatMessage{

@@ -4,37 +4,37 @@ package models
 
 // ResponsesRequest represents the incoming Responses API request
 type ResponsesRequest struct {
-	Model        string          `json:"model"`
-	Instructions string          `json:"instructions,omitempty"`
-	Input        []InputItem     `json:"input,omitempty"`
-	Tools        []Tool          `json:"tools,omitempty"`
-	Stream       bool            `json:"stream,omitempty"`
-	Temperature  *float64        `json:"temperature,omitempty"`
-	MaxTokens    int             `json:"max_output_tokens,omitempty"`
-	PreviousResponseID string    `json:"previous_response_id,omitempty"`
-	Truncation   string          `json:"truncation,omitempty"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	Model              string                 `json:"model"`
+	Instructions       string                 `json:"instructions,omitempty"`
+	Input              []InputItem            `json:"input,omitempty"`
+	Tools              []Tool                 `json:"tools,omitempty"`
+	Stream             bool                   `json:"stream,omitempty"`
+	Temperature        *float64               `json:"temperature,omitempty"`
+	MaxTokens          int                    `json:"max_output_tokens,omitempty"`
+	PreviousResponseID string                 `json:"previous_response_id,omitempty"`
+	Truncation         string                 `json:"truncation,omitempty"`
+	Metadata           map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // InputItem represents an item in the input array
 type InputItem struct {
-	Type           string         `json:"type"` // "message", "function_call", "function_call_output"
-	ID             string         `json:"id,omitempty"`
-	Role           string         `json:"role,omitempty"` // "user", "assistant", "system", "developer", "tool"
-	Content        []ContentItem  `json:"content,omitempty"`
-	CallID         string         `json:"call_id,omitempty"`
-	Name           string         `json:"name,omitempty"`
-	Arguments      string         `json:"arguments,omitempty"`
-	Output         string         `json:"output,omitempty"`
-	Status         string         `json:"status,omitempty"`
+	Type      string        `json:"type"` // "message", "function_call", "function_call_output"
+	ID        string        `json:"id,omitempty"`
+	Role      string        `json:"role,omitempty"` // "user", "assistant", "system", "developer", "tool"
+	Content   []ContentItem `json:"content,omitempty"`
+	CallID    string        `json:"call_id,omitempty"`
+	Name      string        `json:"name,omitempty"`
+	Arguments string        `json:"arguments,omitempty"`
+	Output    string        `json:"output,omitempty"`
+	Status    string        `json:"status,omitempty"`
 }
 
 // ContentItem represents content within a message
 type ContentItem struct {
-	Type        string `json:"type"` // "input_text", "output_text", "input_image", "refusal"
-	Text        string `json:"text,omitempty"`
-	ImageURL    string `json:"image_url,omitempty"`
-	Data        string `json:"data,omitempty"`
+	Type     string `json:"type"` // "input_text", "output_text", "input_image", "refusal"
+	Text     string `json:"text,omitempty"`
+	ImageURL string `json:"image_url,omitempty"`
+	Data     string `json:"data,omitempty"`
 }
 
 // Tool represents a tool definition (Responses API)
@@ -55,13 +55,13 @@ type FunctionDef struct {
 
 // ResponsesResponse represents the Responses API response
 type ResponsesResponse struct {
-	ID        string            `json:"id"`
-	Object    string            `json:"object"`
-	CreatedAt int64             `json:"created_at"`
-	Status    string            `json:"status"`
-	Model     string            `json:"model"`
-	Output    []OutputItem      `json:"output"`
-	Usage     UsageInfo         `json:"usage,omitempty"`
+	ID        string       `json:"id"`
+	Object    string       `json:"object"`
+	CreatedAt int64        `json:"created_at"`
+	Status    string       `json:"status"`
+	Model     string       `json:"model"`
+	Output    []OutputItem `json:"output"`
+	Usage     UsageInfo    `json:"usage,omitempty"`
 }
 
 // OutputItem represents an item in the output array
@@ -87,21 +87,21 @@ type UsageInfo struct {
 
 // ChatCompletionRequest represents the Chat Completions API request
 type ChatCompletionRequest struct {
-	Model       string          `json:"model"`
-	Messages    []ChatMessage   `json:"messages"`
-	Tools       []ChatTool      `json:"tools,omitempty"`
-	Stream      bool            `json:"stream,omitempty"`
-	Temperature *float64        `json:"temperature,omitempty"`
-	MaxTokens   int             `json:"max_tokens,omitempty"`
+	Model       string        `json:"model"`
+	Messages    []ChatMessage `json:"messages"`
+	Tools       []ChatTool    `json:"tools,omitempty"`
+	Stream      bool          `json:"stream,omitempty"`
+	Temperature *float64      `json:"temperature,omitempty"`
+	MaxTokens   int           `json:"max_tokens,omitempty"`
 }
 
 // ChatMessage represents a message in Chat Completions
 type ChatMessage struct {
-	Role         string          `json:"role"` // "system", "user", "assistant", "tool"
-	Content      interface{}     `json:"content"` // string or []ChatContentPart
-	Name         string          `json:"name,omitempty"`
-	ToolCalls    []ToolCall      `json:"tool_calls,omitempty"`
-	ToolCallID   string          `json:"tool_call_id,omitempty"`
+	Role       string      `json:"role"`    // "system", "user", "assistant", "tool"
+	Content    interface{} `json:"content"` // string or []ChatContentPart
+	Name       string      `json:"name,omitempty"`
+	ToolCalls  []ToolCall  `json:"tool_calls,omitempty"`
+	ToolCallID string      `json:"tool_call_id,omitempty"`
 }
 
 // ChatContentPart represents a content part for multimodal messages
@@ -115,15 +115,15 @@ type ChatContentPart struct {
 
 // ChatTool represents a tool in Chat Completions
 type ChatTool struct {
-	Type     string        `json:"type"` // "function"
-	Function FunctionDef   `json:"function"`
+	Type     string      `json:"type"` // "function"
+	Function FunctionDef `json:"function"`
 }
 
 // ToolCall represents a tool call in a message
 type ToolCall struct {
-	ID        string `json:"id"`
-	Type      string `json:"type"` // "function"
-	Function  struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"` // "function"
+	Function struct {
 		Name      string `json:"name"`
 		Arguments string `json:"arguments"`
 	} `json:"function"`
@@ -133,19 +133,19 @@ type ToolCall struct {
 
 // ChatCompletionResponse represents the Chat Completions API response
 type ChatCompletionResponse struct {
-	ID      string         `json:"id"`
-	Object  string         `json:"object"`
-	Created int64          `json:"created"`
-	Model   string         `json:"model"`
-	Choices []ChatChoice   `json:"choices"`
-	Usage   ChatUsage      `json:"usage,omitempty"`
+	ID      string       `json:"id"`
+	Object  string       `json:"object"`
+	Created int64        `json:"created"`
+	Model   string       `json:"model"`
+	Choices []ChatChoice `json:"choices"`
+	Usage   ChatUsage    `json:"usage,omitempty"`
 }
 
 // ChatChoice represents a choice in the response
 type ChatChoice struct {
-	Index        int          `json:"index"`
-	Message      ChatMessage  `json:"message"`
-	FinishReason string       `json:"finish_reason"`
+	Index        int         `json:"index"`
+	Message      ChatMessage `json:"message"`
+	FinishReason string      `json:"finish_reason"`
 }
 
 // ChatUsage represents token usage in Chat Completions
@@ -159,18 +159,18 @@ type ChatUsage struct {
 
 // ChatCompletionChunk represents a streaming chunk from Chat Completions
 type ChatCompletionChunk struct {
-	ID      string              `json:"id"`
-	Object  string              `json:"object"`
-	Created int64               `json:"created"`
-	Model   string              `json:"model"`
-	Choices []ChatChunkChoice   `json:"choices"`
+	ID      string            `json:"id"`
+	Object  string            `json:"object"`
+	Created int64             `json:"created"`
+	Model   string            `json:"model"`
+	Choices []ChatChunkChoice `json:"choices"`
 }
 
 // ChatChunkChoice represents a choice in a streaming chunk
 type ChatChunkChoice struct {
-	Index        int           `json:"index"`
-	Delta        ChatDelta     `json:"delta"`
-	FinishReason string        `json:"finish_reason,omitempty"`
+	Index        int       `json:"index"`
+	Delta        ChatDelta `json:"delta"`
+	FinishReason string    `json:"finish_reason,omitempty"`
 }
 
 // ChatDelta represents the delta in a streaming chunk
@@ -190,8 +190,8 @@ type SSEEvent struct {
 
 // ResponseCreatedEvent represents response.created event
 type ResponseCreatedEvent struct {
-	Type     string           `json:"type"`
-	Response ResponseSummary  `json:"response"`
+	Type     string          `json:"type"`
+	Response ResponseSummary `json:"response"`
 }
 
 // ResponseSummary represents basic response info
@@ -209,22 +209,22 @@ type OutputTextDeltaEvent struct {
 
 // OutputItemAddedEvent represents response.output_item.added event
 type OutputItemAddedEvent struct {
-	Type       string     `json:"type"`
-	OutputIndex int       `json:"output_index,omitempty"`
-	Item       OutputItem `json:"item"`
+	Type        string     `json:"type"`
+	OutputIndex int        `json:"output_index,omitempty"`
+	Item        OutputItem `json:"item"`
 }
 
 // OutputItemDoneEvent represents response.output_item.done event
 type OutputItemDoneEvent struct {
-	Type       string     `json:"type"`
-	OutputIndex int       `json:"output_index,omitempty"`
-	Item       OutputItem `json:"item"`
+	Type        string     `json:"type"`
+	OutputIndex int        `json:"output_index,omitempty"`
+	Item        OutputItem `json:"item"`
 }
 
 // ResponseCompletedEvent represents response.completed event
 type ResponseCompletedEvent struct {
-	Type     string             `json:"type"`
-	Response ResponsesResponse  `json:"response"`
+	Type     string            `json:"type"`
+	Response ResponsesResponse `json:"response"`
 }
 
 // ErrorResponse represents an error response
