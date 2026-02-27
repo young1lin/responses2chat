@@ -84,9 +84,17 @@ codex -c 'model_providers.proxy = { name = "Proxy", base_url = "http://127.0.0.1
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-c, --config` | Config file path | `./config.yaml` |
+| `-c, --config` | Config file path | Auto-detected |
 | `-p, --port` | Listen port | `8080` |
 | `-v, --version` | Show version | |
+
+### Config File Search Priority
+
+When `-c` is not specified, `config.yaml` is searched in this order:
+
+1. Current directory (`./config.yaml`) — **Priority**
+2. `./configs/config.yaml`
+3. `../configs/config.yaml` (when running from `bin/` directory)
 
 ### Environment Variables
 

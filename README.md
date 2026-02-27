@@ -85,9 +85,17 @@ codex -c 'model_providers.proxy = { name = "Proxy", base_url = "http://127.0.0.1
 
 | 参数 | 描述 | 默认值 |
 |------|------|--------|
-| `-c, --config` | 配置文件路径 | `./config.yaml` |
+| `-c, --config` | 配置文件路径 | 自动查找 |
 | `-p, --port` | 监听端口 | `8080` |
 | `-v, --version` | 显示版本 | |
+
+### 配置文件查找优先级
+
+不指定 `-c` 参数时，按以下顺序查找 `config.yaml`：
+
+1. 当前目录 (`./config.yaml`) — **优先**
+2. `./configs/config.yaml`
+3. `../configs/config.yaml` (从 `bin/` 目录运行时)
 
 ### 环境变量
 

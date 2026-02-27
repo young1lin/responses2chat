@@ -52,8 +52,9 @@ func Load(cfgFile string) *Config {
 	} else {
 		v.SetConfigName("config")
 		v.SetConfigType("yaml")
-		v.AddConfigPath(".")
-		v.AddConfigPath("./configs")
+		v.AddConfigPath(".")          // Same directory as executable (priority)
+		v.AddConfigPath("./configs")  // configs/ subdirectory
+		v.AddConfigPath("../configs") // For running from bin/ directory
 	}
 
 	if err := v.ReadInConfig(); err != nil {
