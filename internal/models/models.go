@@ -81,6 +81,19 @@ type UsageInfo struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
 	TotalTokens  int `json:"total_tokens"`
+	// Detailed token info for Codex CLI compatibility
+	InputTokensDetails  *InputTokensDetails  `json:"input_tokens_details,omitempty"`
+	OutputTokensDetails *OutputTokensDetails `json:"output_tokens_details,omitempty"`
+}
+
+// InputTokensDetails represents detailed input token info
+type InputTokensDetails struct {
+	CachedTokens int `json:"cached_tokens,omitempty"`
+}
+
+// OutputTokensDetails represents detailed output token info
+type OutputTokensDetails struct {
+	ReasoningTokens int `json:"reasoning_tokens,omitempty"`
 }
 
 // ==================== Chat Completions API Models ====================
@@ -164,6 +177,27 @@ type ChatCompletionChunk struct {
 	Created int64             `json:"created"`
 	Model   string            `json:"model"`
 	Choices []ChatChunkChoice `json:"choices"`
+	// Usage is included in the final chunk by some providers (Zhipu, etc.)
+	Usage *ChatChunkUsage `json:"usage,omitempty"`
+}
+
+// ChatChunkUsage represents usage info in streaming chunk
+type ChatChunkUsage struct {
+	PromptTokens     int                      `json:"prompt_tokens"`
+	CompletionTokens int                      `json:"completion_tokens"`
+	TotalTokens      int                      `json:"total_tokens"`
+	PromptDetails    *ChatChunkPromptDetails  `json:"prompt_tokens_details,omitempty"`
+	CompletionDetails *ChatChunkCompletionDetails `json:"completion_tokens_details,omitempty"`
+}
+
+// ChatChunkPromptDetails represents prompt token details
+type ChatChunkPromptDetails struct {
+	CachedTokens int `json:"cached_tokens,omitempty"`
+}
+
+// ChatChunkCompletionDetails represents completion token details
+type ChatChunkCompletionDetails struct {
+	ReasoningTokens int `json:"reasoning_tokens,omitempty"`
 }
 
 // ChatChunkChoice represents a choice in a streaming chunk

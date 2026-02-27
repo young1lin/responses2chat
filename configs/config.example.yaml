@@ -9,8 +9,8 @@ server:
 default_target:
   base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
   path_suffix: "/chat/completions"
-  # Set API key via environment variable R2C_DEFAULT_API_KEY or directly below
-  default_api_key: ""  # Or set your Zhipu API key here
+  # Set your Zhipu API key here or via environment variable R2C_DEFAULT_API_KEY
+  default_api_key: "YOUR_ZHIPU_API_KEY"
   timeout: 300
   supports_developer_role: false
 

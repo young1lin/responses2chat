@@ -27,6 +27,7 @@ vendor/
 Thumbs.db
 
 # Config with secrets (keep template)
+configs/config.yaml
 configs/config.local.yaml
 
 # Environment files with secrets

@@ -91,6 +91,7 @@ func HandleStreamingResponse(
 		currentToolID    int
 		toolCalls        = make(map[int]*models.OutputItem)
 		messageItemAdded bool // Track if we've sent the message item added event
+		lastUsage        *models.UsageInfo // Track usage from final chunk
 	)
 
 	for scanner.Scan() {
@@ -133,14 +134,19 @@ func HandleStreamingResponse(
 			msgJSON, _ := json.Marshal(msgDone)
 			writer.WriteEvent("response.output_item.done", string(msgJSON))
 
-			// Send response.completed event
+			// Send response.completed event with usage info
 			// Note: Use "resp-" prefix to match storage format for multi-turn conversation support
+			completedResponse := models.ResponsesResponse{
+				ID:     fmt.Sprintf("resp-%s", responseID),
+				Status: "completed",
+			}
+			// Include usage if available (required for Codex token display)
+			if lastUsage != nil {
+				completedResponse.Usage = *lastUsage
+			}
 			completedEvent := models.ResponseCompletedEvent{
-				Type: "response.completed",
-				Response: models.ResponsesResponse{
-					ID:     fmt.Sprintf("resp-%s", responseID),
-					Status: "completed",
-				},
+				Type:     "response.completed",
+				Response: completedResponse,
 			}
 			completedJSON, _ := json.Marshal(completedEvent)
 			writer.WriteEvent("response.completed", string(completedJSON))
@@ -229,6 +235,29 @@ func HandleStreamingResponse(
 		if chunk.Choices[0].FinishReason != "" {
 			logger.Debug("Stream finished",
 				zap.String("finish_reason", chunk.Choices[0].FinishReason))
+		}
+
+		// Extract usage from final chunk (some providers include usage in the last chunk)
+		if chunk.Usage != nil {
+			lastUsage = &models.UsageInfo{
+				InputTokens:  chunk.Usage.PromptTokens,
+				OutputTokens: chunk.Usage.CompletionTokens,
+				TotalTokens:  chunk.Usage.TotalTokens,
+			}
+			if chunk.Usage.PromptDetails != nil {
+				lastUsage.InputTokensDetails = &models.InputTokensDetails{
+					CachedTokens: chunk.Usage.PromptDetails.CachedTokens,
+				}
+			}
+			if chunk.Usage.CompletionDetails != nil {
+				lastUsage.OutputTokensDetails = &models.OutputTokensDetails{
+					ReasoningTokens: chunk.Usage.CompletionDetails.ReasoningTokens,
+				}
+			}
+			logger.Debug("Extracted usage from stream",
+				zap.Int("input_tokens", lastUsage.InputTokens),
+				zap.Int("output_tokens", lastUsage.OutputTokens),
+				zap.Int("total_tokens", lastUsage.TotalTokens))
 		}
 	}
 
