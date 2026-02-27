@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build binaries
+        run: |
+          # Linux amd64
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/responses2chat-linux-amd64 ./cmd/responses2chat
+          # Linux arm64
+          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/responses2chat-linux-arm64 ./cmd/responses2chat
+          # Windows amd64
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o bin/responses2chat-windows-amd64.exe ./cmd/responses2chat
+          # macOS amd64
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o bin/responses2chat-darwin-amd64 ./cmd/responses2chat
+          # macOS arm64
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o bin/responses2chat-darwin-arm64 ./cmd/responses2chat
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: bin/*
+          generate_release_notes: true

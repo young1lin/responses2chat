@@ -1,0 +1,74 @@
+# Server configuration
+server:
+  host: "127.0.0.1"
+  port: 8080
+  read_timeout: 30
+  write_timeout: 300
+
+# Default target API configuration
+default_target:
+  base_url: "https://api.deepseek.com"
+  path_suffix: "/v1/chat/completions"
+  # Set API key via environment variable R2C_DEFAULT_API_KEY or Authorization header
+  timeout: 300
+
+# Multi-provider configuration
+# Set API keys via environment variables:
+# - R2C_PROVIDER_DEEPSEEK_API_KEY
+# - R2C_PROVIDER_ZHIPU_API_KEY
+# - R2C_PROVIDER_QWEN_API_KEY
+# - etc.
+providers:
+  deepseek:
+    base_url: "https://api.deepseek.com"
+    path_suffix: "/v1/chat/completions"
+    timeout: 300
+
+  zhipu:
+    base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
+    path_suffix: "/chat/completions"
+    timeout: 300
+
+  qwen:
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    path_suffix: "/chat/completions"
+    timeout: 300
+
+  ollama:
+    base_url: "http://localhost:11434"
+    path_suffix: "/v1/chat/completions"
+    timeout: 300
+
+  lmstudio:
+    base_url: "http://localhost:1234"
+    path_suffix: "/v1/chat/completions"
+    timeout: 300
+
+  longcat:
+    base_url: "https://api.longcat.chat/openai"
+    path_suffix: "/v1/chat/completions"
+    timeout: 300
+
+  stepfun:
+    base_url: "https://api.stepfun.com/v1"
+    path_suffix: "/chat/completions"
+    timeout: 300
+
+  deepinfra:
+    base_url: "https://api.deepinfra.com/v1/openai"
+    path_suffix: "/chat/completions"
+    timeout: 300
+
+# Logging configuration
+logging:
+  level: "info"
+  format: "text"
+
+# Model mapping (optional)
+# Maps Codex model names to target provider model names
+model_mapping:
+  "gpt-4": "deepseek-chat"
+  "gpt-4o": "deepseek-chat"
+  "gpt-4-turbo": "deepseek-chat"
+  "o1": "deepseek-reasoner"
+  "o3-mini": "deepseek-reasoner"
