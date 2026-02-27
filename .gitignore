@@ -41,3 +41,15 @@ configs/config.local.yaml
 
 # Data directory (conversation storage)
 data/
+
+# Test scripts (may contain API keys)
+test_*.sh
+test_*.bash
+*_test.sh
+
+# Files with secrets/api keys
+*secret*
+*apikey*
+*api_key*
+*.key
+*_credentials*

@@ -1,5 +1,14 @@
 # responses2chat - Claude Code 项目指南
 
+## ⚠️ 安全警告
+
+**绝对禁止提交任何 API Key、密钥或敏感信息到代码库！**
+
+- 所有包含敏感信息的配置文件已在 `.gitignore` 中排除
+- 测试脚本 (`test_*.sh`) 默认被忽略，因为可能包含硬编码的 API Key
+- **提交前必须检查**: `git diff --staged` 确认没有敏感信息
+- 如果不小心提交了 API Key，**立即更换该 Key**
+
 ## 项目概述
 
 一个将 OpenAI **Responses API** 请求转换为 **Chat Completions API** 格式的代理服务器，让 [Codex CLI](https://github.com/openai/codex) 能够与第三方 LLM 提供商一起工作。
