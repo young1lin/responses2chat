@@ -244,15 +244,21 @@ func HandleStreamingResponse(
 				OutputTokens: chunk.Usage.CompletionTokens,
 				TotalTokens:  chunk.Usage.TotalTokens,
 			}
+			// Always set InputTokensDetails with default if not provided
+			cachedTokens := 0
 			if chunk.Usage.PromptDetails != nil {
-				lastUsage.InputTokensDetails = &models.InputTokensDetails{
-					CachedTokens: chunk.Usage.PromptDetails.CachedTokens,
-				}
+				cachedTokens = chunk.Usage.PromptDetails.CachedTokens
 			}
+			lastUsage.InputTokensDetails = &models.InputTokensDetails{
+				CachedTokens: cachedTokens,
+			}
+			// Always set OutputTokensDetails with default if not provided
+			reasoningTokens := 0
 			if chunk.Usage.CompletionDetails != nil {
-				lastUsage.OutputTokensDetails = &models.OutputTokensDetails{
-					ReasoningTokens: chunk.Usage.CompletionDetails.ReasoningTokens,
-				}
+				reasoningTokens = chunk.Usage.CompletionDetails.ReasoningTokens
+			}
+			lastUsage.OutputTokensDetails = &models.OutputTokensDetails{
+				ReasoningTokens: reasoningTokens,
 			}
 			logger.Debug("Extracted usage from stream",
 				zap.Int("input_tokens", lastUsage.InputTokens),

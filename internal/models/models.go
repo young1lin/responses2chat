@@ -88,12 +88,12 @@ type UsageInfo struct {
 
 // InputTokensDetails represents detailed input token info
 type InputTokensDetails struct {
-	CachedTokens int `json:"cached_tokens,omitempty"`
+	CachedTokens int `json:"cached_tokens"`
 }
 
 // OutputTokensDetails represents detailed output token info
 type OutputTokensDetails struct {
-	ReasoningTokens int `json:"reasoning_tokens,omitempty"`
+	ReasoningTokens int `json:"reasoning_tokens"`
 }
 
 // ==================== Chat Completions API Models ====================
