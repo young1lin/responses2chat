@@ -11,6 +11,11 @@ type Config struct {
 	Providers    map[string]TargetConfig  `mapstructure:"providers"`
 	Logging      LoggingConfig            `mapstructure:"logging"`
 	ModelMapping map[string]string        `mapstructure:"model_mapping"`
+	Storage      StorageConfig            `mapstructure:"storage"`
+}
+
+type StorageConfig struct {
+	Path string `mapstructure:"path"` // Database path, default ./data/conversations.db
 }
 
 type ServerConfig struct {
@@ -86,4 +91,7 @@ func setDefaults(v *viper.Viper) {
 	// Logging defaults
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "text")
+
+	// Storage defaults
+	v.SetDefault("storage.path", "./data/conversations.db")
 }

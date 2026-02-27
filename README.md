@@ -21,6 +21,44 @@ OpenAI Codex 现在只支持 Responses API (`/v1/responses`)，但大多数第�
 - 📊 结构化日志（Uber Zap + TraceID 追踪）
 - 🛠️ 工具/函数调用支持
 - 🔍 请求追踪（X-Trace-ID 支持）
+- 💾 **多轮对话支持**（`previous_response_id` + BBolt 持久化存储）
+- 📜 **历史查询接口**（`GET /v1/responses/{id}`）
+
+## 更新日志
+
+### v0.0.2 (2026-02-27)
+
+**新功能：多轮对话支持**
+
+基于 [OpenAI 官方迁移文档](https://developers.openai.com/api/docs/guides/migrate-to-responses) 实现：
+
+- ✅ `previous_response_id` 多轮对话 - 自动拼接历史消息
+- ✅ `GET /v1/responses/{id}` 历史查询接口
+- ✅ BBolt 持久化存储 - 重启不丢失对话
+- ✅ 流式响应历史存储
+
+**技术实现：**
+
+| 功能 | 说明 |
+|------|------|
+| 存储层 | BBolt (纯 Go 嵌入式 KV) |
+| 并发安全 | MVCC |
+| 默认路径 | `./data/conversations.db` |
+
+**文件变更：**
+
+```
+新增:
+  internal/storage/storage.go          # BBolt 存储层
+  internal/storage/storage_test.go     # 存储测试
+  internal/converter/converter_test.go # 转换测试
+  COMPATIBILITY.md                      # 兼容性文档
+
+修改:
+  internal/handler/handler.go          # 集成存储 + GET 接口
+  internal/converter/converter.go      # 支持 history 参数
+  internal/converter/streaming.go      # 流式响应存储
+```
 
 ## 安装
 
@@ -148,6 +186,7 @@ curl -H "X-Target-Provider: deepseek" http://localhost:8080/v1/responses
 |------|------|
 | `POST /v1/responses` | 默认提供商 |
 | `POST /{provider}/v1/responses` | 指定提供商 |
+| `GET /v1/responses/{id}` | 查询对话历史 |
 | `GET /health` | 健康检查 |
 | `GET /providers` | 列出可用提供商 |
 

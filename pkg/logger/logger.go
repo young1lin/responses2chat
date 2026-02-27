@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	Log    *zap.Logger
-	Sugar  *zap.SugaredLogger
+	Log   *zap.Logger
+	Sugar *zap.SugaredLogger
 )
 
 // TraceIDKey is the context key for trace ID
@@ -26,6 +26,10 @@ func Init(level, format string) {
 		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05")
 	}
+
+	// Output to stdout instead of stderr
+	config.OutputPaths = []string{"stdout"}
+	config.ErrorOutputPaths = []string{"stdout"}
 
 	// Set log level
 	switch level {
@@ -46,6 +50,9 @@ func Init(level, format string) {
 	}
 
 	Sugar = Log.Sugar()
+
+	// Redirect standard log to zap
+	zap.RedirectStdLog(Log)
 }
 
 // Sync flushes any buffered log entries
@@ -109,6 +116,12 @@ func Warn(msg string, fields ...zap.Field) {
 func Error(msg string, fields ...zap.Field) {
 	if Log != nil {
 		Log.Error(msg, fields...)
+	}
+}
+
+func Fatal(msg string, fields ...zap.Field) {
+	if Log != nil {
+		Log.Fatal(msg, fields...)
 	}
 }
 

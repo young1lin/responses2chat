@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/young1lin/responses2chat/internal/config"
 	"github.com/young1lin/responses2chat/internal/handler"
+	"github.com/young1lin/responses2chat/internal/storage"
 	"github.com/young1lin/responses2chat/pkg/logger"
 )
 
@@ -25,7 +27,7 @@ var (
 var (
 	cfgFile string
 	port    int
-	showVer  bool
+	showVer bool
 )
 
 var rootCmd = &cobra.Command{
@@ -75,8 +77,26 @@ func main() {
 }
 
 func startServer(cfg *config.Config) {
+	// Initialize storage
+	storePath := cfg.Storage.Path
+	if storePath == "" {
+		storePath = "./data/conversations.db"
+	}
+
+	// Ensure directory exists
+	dir := filepath.Dir(storePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		logger.Fatal("failed to create data directory", zap.Error(err))
+	}
+
+	store, err := storage.NewConversationStore(storePath)
+	if err != nil {
+		logger.Fatal("failed to init storage", zap.Error(err))
+	}
+	defer store.Close()
+
 	// Create handler
-	proxyHandler := handler.NewProxyHandler(cfg)
+	proxyHandler := handler.NewProxyHandler(cfg, store)
 
 	// Create server
 	srv := &http.Server{
@@ -104,9 +124,10 @@ func startServer(cfg *config.Config) {
 ║  Server: http://%s:%d                            ║
 ║  Health: http://%s:%d/health                      ║
 ║  Target: %s                         ║
+║  Storage: %s                          ║
 ╚═══════════════════════════════════════════════════════════╝
 
-`, Version, cfg.Server.Host, cfg.Server.Port, cfg.Server.Host, cfg.Server.Port, cfg.DefaultTarget.BaseURL)
+`, Version, cfg.Server.Host, cfg.Server.Port, cfg.Server.Host, cfg.Server.Port, cfg.DefaultTarget.BaseURL, storePath)
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)

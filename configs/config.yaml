@@ -61,7 +61,7 @@ providers:
 
 # Logging configuration
 logging:
-  level: "info"
+  level: "debug"
   format: "text"
 
 # Model mapping (optional)
@@ -72,3 +72,7 @@ model_mapping:
   "gpt-4-turbo": "deepseek-chat"
   "o1": "deepseek-reasoner"
   "o3-mini": "deepseek-reasoner"
+
+# Storage configuration for multi-turn conversation support
+storage:
+  path: "./data/conversations.db"

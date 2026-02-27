@@ -7,7 +7,8 @@ import (
 )
 
 // ConvertRequest converts a Responses API request to Chat Completions API request
-func ConvertRequest(req *models.ResponsesRequest, modelMapping map[string]string) *models.ChatCompletionRequest {
+// history contains previous conversation messages retrieved by previous_response_id
+func ConvertRequest(req *models.ResponsesRequest, modelMapping map[string]string, history []models.ChatMessage) *models.ChatCompletionRequest {
 	chatReq := &models.ChatCompletionRequest{
 		Stream: req.Stream,
 	}
@@ -18,13 +19,30 @@ func ConvertRequest(req *models.ResponsesRequest, modelMapping map[string]string
 		chatReq.Model = mapped
 	}
 
-	// Convert instructions to system message
+	// Start with history messages if any
 	var messages []models.ChatMessage
+	if len(history) > 0 {
+		messages = make([]models.ChatMessage, len(history))
+		copy(messages, history)
+	}
+
+	// Convert instructions to system message (only if no history or first message is not system)
 	if req.Instructions != "" {
-		messages = append(messages, models.ChatMessage{
-			Role:    "system",
-			Content: req.Instructions,
-		})
+		// Check if we already have a system message in history
+		hasSystemMsg := false
+		for _, m := range messages {
+			if m.Role == "system" {
+				hasSystemMsg = true
+				break
+			}
+		}
+		// Only add system message if not present in history
+		if !hasSystemMsg {
+			messages = append([]models.ChatMessage{{
+				Role:    "system",
+				Content: req.Instructions,
+			}}, messages...)
+		}
 	}
 
 	// Convert input items to messages

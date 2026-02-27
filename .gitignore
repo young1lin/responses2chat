@@ -37,3 +37,6 @@ configs/config.local.yaml
 
 # Logs
 *.log
+
+# Data directory (conversation storage)
+data/

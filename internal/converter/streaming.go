@@ -48,13 +48,20 @@ func truncateString(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
+// StreamResult contains the result of streaming response for storage
+type StreamResult struct {
+	OutputText string
+	ToolCalls  []models.OutputItem
+}
+
 // HandleStreamingResponse handles streaming response conversion
+// Returns the collected result for storage
 func HandleStreamingResponse(
 	resp *http.Response,
 	w http.ResponseWriter,
 	responseID string,
 	logger *zap.Logger,
-) {
+) *StreamResult {
 	// Set SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -226,6 +233,15 @@ func HandleStreamingResponse(
 	if err := scanner.Err(); err != nil {
 		logger.Error("Error reading stream", zap.Error(err))
 	}
+
+	// Return collected result for storage
+	result := &StreamResult{
+		OutputText: outputText,
+	}
+	for _, tc := range toolCalls {
+		result.ToolCalls = append(result.ToolCalls, *tc)
+	}
+	return result
 }
 
 // hashToolCallID creates a simple hash for tool call ID indexing
